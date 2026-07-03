@@ -1193,19 +1193,28 @@ const firebaseConfig = {
   measurementId: "G-RZR5Q4EXG6"
 };
 
+function withTimeout(promise, ms){
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(()=> reject(new Error("timeout")), ms))
+  ]);
+}
+
 async function initFirebase(){
   try{
-    const appMod = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
-    const fsMod  = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+    // Hard timeout: some networks/extensions (ad/tracker blockers) silently hang
+    // requests to Google CDNs instead of failing fast. Never let that block boot.
+    const appMod = await withTimeout(import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"), 4000);
+    const fsMod  = await withTimeout(import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"), 4000);
     firebaseApp = appMod.initializeApp(firebaseConfig);
     db = fsMod.getFirestore(firebaseApp);
     fbDoc = fsMod.doc; fbSetDoc = fsMod.setDoc; fbOnSnapshot = fsMod.onSnapshot; fbGetDoc = fsMod.getDoc;
-    // quick connectivity probe
-    await fbGetDoc(fbDoc(db, "users", "dev")).catch(()=>{});
+    // quick connectivity probe — also time-boxed
+    await withTimeout(fbGetDoc(fbDoc(db, "users", "dev")), 4000).catch(()=>{});
     firebaseReady = true;
     console.log("[Orbit] Firebase connected.");
   }catch(err){
-    console.warn("[Orbit] Firebase unavailable, falling back to LocalStorage.", err);
+    console.warn("[Orbit] Firebase unavailable (or blocked by an extension/network), falling back to LocalStorage.", err);
     firebaseReady = false;
   }
 }
@@ -2460,8 +2469,25 @@ document.addEventListener("keydown", (e)=>{
    BOOT SEQUENCE
    --------------------------------------------------------------- */
 (async function boot(){
-  await initFirebase();
-  checkSession();
+  // Absolute fallback: no matter what happens above, never leave the user
+  // staring at the loading screen for more than 5s.
+  const forceReveal = setTimeout(()=>{
+    if(!loadingScreen.classList.contains("hidden")){
+      loadingScreen.classList.add("hidden");
+      loginScreen.classList.remove("hidden");
+    }
+  }, 5000);
+
+  try{
+    await initFirebase();
+    checkSession();
+  }catch(err){
+    console.error("[Orbit] Boot error, showing login anyway.", err);
+    loadingScreen.classList.add("hidden");
+    loginScreen.classList.remove("hidden");
+  }finally{
+    clearTimeout(forceReveal);
+  }
 })();
 
 </script>
