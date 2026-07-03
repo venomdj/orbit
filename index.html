@@ -215,6 +215,8 @@ ul,ol{ list-style:none; }
   position:relative; overflow:hidden; white-space:nowrap;
 }
 .btn:active{ transform:scale(.96); }
+.btn.ripple-flash{ animation: btnFlash .3s ease-out; }
+@keyframes btnFlash{ 0%{ box-shadow:0 0 0 0 rgba(57,224,168,.5);} 100%{ box-shadow:0 0 0 10px rgba(57,224,168,0);} }
 .btn-primary{
   width:100%; margin-top:6px; color:#0a0b0f;
   background:linear-gradient(135deg, var(--dev-1), var(--shared-1));
@@ -276,6 +278,15 @@ ul,ol{ list-style:none; }
 .nav-item:hover .kbd-hint{ opacity:1; }
 
 .sidebar-footer{ margin-top:auto; padding-top:14px; border-top:1px solid var(--border-glass); }
+.sync-status{
+  display:flex; align-items:center; gap:7px; font-size:11px; color:var(--text-3);
+  padding:6px 10px; margin-bottom:8px; border-radius:20px; background:rgba(255,255,255,.03);
+}
+.sync-status .dot{ width:6px; height:6px; border-radius:50%; background:var(--text-3); flex-shrink:0; }
+.sync-status.live{ color:var(--success); }
+.sync-status.live .dot{ background:var(--success); animation:pulseDot 1.6s ease-in-out infinite; }
+.sync-status.offline{ color:var(--warn); }
+.sync-status.offline .dot{ background:var(--warn); }
 .mini-profile{ display:flex; align-items:center; gap:10px; padding:8px; border-radius:12px; }
 .mini-profile:hover{ background:var(--surface-glass); }
 .avatar{
@@ -355,31 +366,57 @@ ul,ol{ list-style:none; }
 @keyframes pulseDot{ 0%,100%{ opacity:1; transform:scale(1);} 50%{ opacity:.4; transform:scale(1.3);} }
 
 .timer-display{
-  font-family:var(--f-mono); font-size:52px; font-weight:700; letter-spacing:.01em; text-align:center;
-  margin:18px 0 6px; font-variant-numeric:tabular-nums;
+  font-family:var(--f-mono); font-size:52px; font-weight:700; letter-spacing:.02em; text-align:center;
+  margin:0; font-variant-numeric:tabular-nums; line-height:1;
   background:linear-gradient(135deg, var(--text-0), var(--text-1));
   -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
-  transition: filter var(--dur-med) var(--ease-out);
-  border-radius:16px;
 }
-/* glow while a session is actively running — color matches whose card it is */
-.timer-display.studying.dev{
-  animation: timerGlowDev 1.8s ease-in-out infinite;
+/* ---- timer panel: wraps the digits in a glass ring that glows while running ---- */
+.timer-panel{
+  position:relative; margin:16px 0 6px; padding:26px 20px 20px; border-radius:24px;
+  background:rgba(255,255,255,.025); border:1px solid var(--border-glass);
+  display:flex; flex-direction:column; align-items:center;
+  transition: background var(--dur-med) var(--ease-out), border-color var(--dur-med) var(--ease-out);
+  isolation:isolate;
 }
-.timer-display.studying.oshu{
-  animation: timerGlowOshu 1.8s ease-in-out infinite;
+.timer-panel.studying{ background:rgba(255,255,255,.045); }
+.timer-panel.studying.dev{ border-color:rgba(91,141,255,.5); animation: panelGlowDev 2.2s ease-in-out infinite; }
+.timer-panel.studying.oshu{ border-color:rgba(255,111,165,.5); animation: panelGlowOshu 2.2s ease-in-out infinite; }
+@keyframes panelGlowDev{
+  0%,100%{ box-shadow:0 0 0 1px rgba(91,141,255,.18), 0 8px 30px -6px var(--dev-glow); }
+  50%{ box-shadow:0 0 0 2px rgba(91,141,255,.4), 0 10px 60px -4px var(--dev-glow); }
 }
-@keyframes timerGlowDev{
-  0%,100%{ filter:drop-shadow(0 0 10px var(--dev-glow)) drop-shadow(0 0 2px var(--dev-glow)); }
-  50%{ filter:drop-shadow(0 0 26px var(--dev-glow)) drop-shadow(0 0 8px var(--dev-glow)); }
+@keyframes panelGlowOshu{
+  0%,100%{ box-shadow:0 0 0 1px rgba(255,111,165,.18), 0 8px 30px -6px var(--oshu-glow); }
+  50%{ box-shadow:0 0 0 2px rgba(255,111,165,.4), 0 10px 60px -4px var(--oshu-glow); }
 }
-@keyframes timerGlowOshu{
-  0%,100%{ filter:drop-shadow(0 0 10px var(--oshu-glow)) drop-shadow(0 0 2px var(--oshu-glow)); }
-  50%{ filter:drop-shadow(0 0 26px var(--oshu-glow)) drop-shadow(0 0 8px var(--oshu-glow)); }
+/* extra glowing halo behind the panel — blooms outward behind the glass so the
+   "studying" state reads unmistakably at a glance, layered with the box-shadow above */
+.timer-panel::after{
+  content:''; position:absolute; inset:-10px; z-index:-1; border-radius:32px;
+  opacity:0; pointer-events:none; transition:opacity var(--dur-med) var(--ease-out);
 }
+.timer-panel.studying.dev::after{
+  opacity:1; background:radial-gradient(circle, var(--dev-glow), transparent 72%);
+  filter:blur(20px); animation: haloPulse 2.2s ease-in-out infinite;
+}
+.timer-panel.studying.oshu::after{
+  opacity:1; background:radial-gradient(circle, var(--oshu-glow), transparent 72%);
+  filter:blur(20px); animation: haloPulse 2.2s ease-in-out infinite;
+}
+@keyframes haloPulse{ 0%,100%{ opacity:.45; transform:scale(.97);} 50%{ opacity:.95; transform:scale(1.05);} }
+
+/* soft breathing pulse + glow on the digits themselves, in sync with the panel */
+.timer-panel.studying .timer-display{ animation: digitPulse 2.2s ease-in-out infinite; }
+.timer-panel.studying.dev .timer-display{ animation-name: digitPulse, digitGlowDev; animation-duration:2.2s; animation-timing-function:ease-in-out; animation-iteration-count:infinite; }
+.timer-panel.studying.oshu .timer-display{ animation-name: digitPulse, digitGlowOshu; animation-duration:2.2s; animation-timing-function:ease-in-out; animation-iteration-count:infinite; }
+@keyframes digitPulse{ 0%,100%{ opacity:1; } 50%{ opacity:.86; } }
+@keyframes digitGlowDev{ 0%,100%{ filter:drop-shadow(0 0 4px var(--dev-glow)); } 50%{ filter:drop-shadow(0 0 14px var(--dev-glow)); } }
+@keyframes digitGlowOshu{ 0%,100%{ filter:drop-shadow(0 0 4px var(--oshu-glow)); } 50%{ filter:drop-shadow(0 0 14px var(--oshu-glow)); } }
+
 /* matching glow ring around the avatar while studying */
-.avatar.studying.dev{ animation: avatarGlowDev 1.8s ease-in-out infinite; }
-.avatar.studying.oshu{ animation: avatarGlowOshu 1.8s ease-in-out infinite; }
+.avatar.studying.dev{ animation: avatarGlowDev 2.4s ease-in-out infinite; }
+.avatar.studying.oshu{ animation: avatarGlowOshu 2.4s ease-in-out infinite; }
 @keyframes avatarGlowDev{
   0%,100%{ box-shadow:0 0 0 3px rgba(91,141,255,.28), 0 0 14px 2px var(--dev-glow); }
   50%{ box-shadow:0 0 0 5px rgba(91,141,255,.4), 0 0 28px 8px var(--dev-glow); }
@@ -388,10 +425,10 @@ ul,ol{ list-style:none; }
   0%,100%{ box-shadow:0 0 0 3px rgba(255,111,165,.28), 0 0 14px 2px var(--oshu-glow); }
   50%{ box-shadow:0 0 0 5px rgba(255,111,165,.4), 0 0 28px 8px var(--oshu-glow); }
 }
-.timer-sub{ text-align:center; font-size:12px; color:var(--text-3); margin-bottom:18px; }
+.timer-sub{ text-align:center; font-size:11.5px; color:var(--text-3); margin-top:10px; }
 .timer-sub span{ color:var(--text-1); font-weight:600; }
 
-.timer-controls{ display:flex; gap:8px; margin-bottom:22px; }
+.timer-controls{ display:flex; gap:8px; margin:16px 0 22px; }
 .timer-controls .btn{ flex:1; }
 .btn-start.dev{ background:linear-gradient(135deg, var(--dev-1), var(--dev-2)); color:#fff; box-shadow:0 8px 22px -8px var(--dev-glow); }
 .btn-start.oshu{ background:linear-gradient(135deg, var(--oshu-1), var(--oshu-2)); color:#fff; box-shadow:0 8px 22px -8px var(--oshu-glow); }
@@ -415,7 +452,17 @@ ul,ol{ list-style:none; }
   padding:10px 12px; font-size:12.5px; color:var(--text-1); min-height:56px; margin-top:4px;
 }
 .quick-note-box:focus{ border-color:var(--border-glass-hi); outline:none; }
-.field-label{ font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-3); margin-bottom:6px; display:block; font-weight:700; }
+.quick-note-box[readonly]{ color:var(--text-2); cursor:default; background:rgba(255,255,255,.02); }
+.field-label{ font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-3); margin-bottom:6px; font-weight:700; position:relative; display:flex; align-items:center; gap:6px; }
+.quick-note-wrap{ display:flex; flex-direction:column; gap:8px; }
+.quick-note-send{ align-self:flex-end; padding:7px 16px; font-size:12px; }
+.quick-note-send.hidden{ display:none; }
+
+/* small red badge dot, reused wherever we need to flag unread content —
+   nav items, dashboard card labels, etc. */
+.badge-dot{ display:none; width:7px; height:7px; border-radius:50%; background:var(--danger); box-shadow:0 0 0 2px var(--bg-1); flex-shrink:0; }
+.badge-dot.show{ display:inline-block; animation:pulseDot 1.6s ease-in-out infinite; }
+.nav-item .badge-dot{ position:absolute; top:10px; right:12px; }
 
 /* ---- small utility text ---- */
 .muted{ color:var(--text-3); }
@@ -438,7 +485,9 @@ ul,ol{ list-style:none; }
   border:1px solid var(--border-glass); font-size:13px;
 }
 .search-input:focus{ outline:none; border-color:var(--border-glass-hi); }
-.filter-pill{ padding:8px 13px; border-radius:20px; background:var(--surface-glass); border:1px solid var(--border-glass); font-size:12px; color:var(--text-2); font-weight:600; }
+.filter-pill{ padding:8px 13px; border-radius:20px; background:var(--surface-glass); border:1px solid var(--border-glass); font-size:12px; color:var(--text-2); font-weight:600; position:relative; }
+.unread-dot{ display:none; position:absolute; top:5px; right:6px; width:7px; height:7px; border-radius:50%; background:var(--danger); box-shadow:0 0 0 2px var(--bg-1); }
+.unread-dot.show{ display:block; animation:pulseDot 1.6s ease-in-out infinite; }
 .filter-pill.active{ background:var(--text-0); color:var(--bg-0); }
 .add-task-form{ display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
 .add-task-form input[type=text]{ flex:2; min-width:160px; padding:11px 14px; border-radius:12px; background:var(--surface-glass); border:1px solid var(--border-glass); font-size:13px; }
@@ -502,6 +551,9 @@ ul,ol{ list-style:none; }
 .notes-toolbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
 .save-indicator{ font-size:11px; color:var(--text-3); display:flex; align-items:center; gap:6px; }
 .save-indicator .dot{ width:6px; height:6px; border-radius:50%; background:var(--success); }
+#notes-mark-read-btn.hidden{ display:none; }
+#notes-save-btn.hidden{ display:none; }
+.notes-editor[readonly]{ color:var(--text-2); background:rgba(255,255,255,.02); cursor:default; }
 
 /* ================================================================
    ANALYTICS
@@ -718,6 +770,7 @@ ul,ol{ list-style:none; }
         <button class="nav-item" data-view="notes">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
           Notes
+          <span class="badge-dot" id="nav-notes-badge" title="Unread note"></span>
         </button>
       </div>
       <div class="nav-group">
@@ -749,6 +802,10 @@ ul,ol{ list-style:none; }
     </nav>
 
     <div class="sidebar-footer">
+      <div class="sync-status" id="sync-status" title="Cross-device sync status">
+        <span class="dot" id="sync-status-dot"></span>
+        <span id="sync-status-text">Checking sync…</span>
+      </div>
       <div class="mini-profile" id="mini-profile">
         <div class="avatar" id="sidebar-avatar">D<span class="status-dot" id="sidebar-status-dot"></span></div>
         <div>
@@ -835,8 +892,10 @@ ul,ol{ list-style:none; }
               <option>Web Development</option><option>Projects</option><option>Aptitude</option>
             </select>
 
-            <div class="timer-display" data-timer>00:00:00</div>
-            <div class="timer-sub">Today's session · started <span data-timer-start>—</span></div>
+            <div class="timer-panel dev" data-timer-panel>
+              <div class="timer-display" data-timer>00:00:00</div>
+              <div class="timer-sub">Today's session · started <span data-timer-start>—</span></div>
+            </div>
 
             <div class="timer-controls">
               <button class="btn btn-start dev" data-action="start"><svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><polygon points="5,3 19,12 5,21"/></svg>Start</button>
@@ -858,8 +917,11 @@ ul,ol{ list-style:none; }
             <div class="progress-label"><span>Daily goal</span><span data-goal-pct>0%</span></div>
             <div class="progress-track"><div class="progress-fill dev" data-goal-fill style="width:0%"></div></div>
 
-            <label class="field-label" style="margin-top:16px; display:block;">Quick note</label>
-            <textarea class="quick-note-box" placeholder="Jot something down…" data-quick-note></textarea>
+            <label class="field-label" style="margin-top:16px;" data-quick-note-label>Quick note<span class="badge-dot" data-quick-note-badge></span></label>
+            <div class="quick-note-wrap">
+              <textarea class="quick-note-box" placeholder="Jot something down…" data-quick-note></textarea>
+              <button class="btn btn-primary btn-sm quick-note-send" data-quick-note-send type="button">Send</button>
+            </div>
           </div>
 
           <!-- OSHU CARD -->
@@ -878,8 +940,10 @@ ul,ol{ list-style:none; }
               <option>PYQs</option><option>Revision</option><option>Mock Tests</option>
             </select>
 
-            <div class="timer-display" data-timer>00:00:00</div>
-            <div class="timer-sub">Today's session · started <span data-timer-start>—</span></div>
+            <div class="timer-panel oshu" data-timer-panel>
+              <div class="timer-display" data-timer>00:00:00</div>
+              <div class="timer-sub">Today's session · started <span data-timer-start>—</span></div>
+            </div>
 
             <div class="timer-controls">
               <button class="btn btn-start oshu" data-action="start"><svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><polygon points="5,3 19,12 5,21"/></svg>Start</button>
@@ -901,8 +965,11 @@ ul,ol{ list-style:none; }
             <div class="progress-label"><span>Daily goal</span><span data-goal-pct>0%</span></div>
             <div class="progress-track"><div class="progress-fill oshu" data-goal-fill style="width:0%"></div></div>
 
-            <label class="field-label" style="margin-top:16px; display:block;">Quick note</label>
-            <textarea class="quick-note-box" placeholder="Jot something down…" data-quick-note></textarea>
+            <label class="field-label" style="margin-top:16px;" data-quick-note-label>Quick note<span class="badge-dot" data-quick-note-badge></span></label>
+            <div class="quick-note-wrap">
+              <textarea class="quick-note-box" placeholder="Jot something down…" data-quick-note></textarea>
+              <button class="btn btn-primary btn-sm quick-note-send" data-quick-note-send type="button">Send</button>
+            </div>
           </div>
         </div>
 
@@ -1010,14 +1077,24 @@ ul,ol{ list-style:none; }
         <div class="view-header">
           <div><h1 class="view-title">Notes</h1><p class="view-desc">Autosaving notes, synced instantly. Use ``` for code blocks, **bold**, and - for lists.</p></div>
           <div style="display:flex; gap:8px;">
-            <button class="filter-pill active" data-notes-tab="dev">Dev</button>
-            <button class="filter-pill" data-notes-tab="oshu">Oshu</button>
+            <button class="filter-pill active" data-notes-tab="dev">Dev<span class="unread-dot" data-unread-dot="dev"></span></button>
+            <button class="filter-pill" data-notes-tab="oshu">Oshu<span class="unread-dot" data-unread-dot="oshu"></span></button>
           </div>
         </div>
         <div class="glass card-pad-lg">
           <div class="notes-toolbar">
-            <span class="muted" style="font-size:12px;">Rich text, markdown-ish formatting supported</span>
-            <span class="save-indicator"><span class="dot"></span><span id="notes-save-text">Saved</span></span>
+            <span class="muted" style="font-size:12px;">Rich text, markdown-ish formatting supported · <kbd class="kbd-hint" style="opacity:.7;">Ctrl</kbd>+<kbd class="kbd-hint" style="opacity:.7;">Enter</kbd> to save</span>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <button class="btn btn-ghost btn-sm hidden" id="notes-mark-read-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                Mark as read
+              </button>
+              <button class="btn btn-primary btn-sm" id="notes-save-btn" style="width:auto; margin-top:0;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+                Save
+              </button>
+              <span class="save-indicator"><span class="dot"></span><span id="notes-save-text">Saved</span></span>
+            </div>
           </div>
           <textarea class="notes-editor" id="notes-editor" placeholder="Start typing your notes…"></textarea>
         </div>
@@ -1211,6 +1288,14 @@ function withTimeout(promise, ms){
   ]);
 }
 
+function setSyncStatus(isLive){
+  const el = document.getElementById("sync-status");
+  const text = document.getElementById("sync-status-text");
+  if(!el || !text) return;
+  el.className = "sync-status " + (isLive ? "live" : "offline");
+  text.textContent = isLive ? "Synced with Firebase" : "Local only — not synced";
+}
+
 async function initFirebase(){
   try{
     // Hard timeout: some networks/extensions (ad/tracker blockers) silently hang
@@ -1220,13 +1305,24 @@ async function initFirebase(){
     firebaseApp = appMod.initializeApp(firebaseConfig);
     db = fsMod.getFirestore(firebaseApp);
     fbDoc = fsMod.doc; fbSetDoc = fsMod.setDoc; fbOnSnapshot = fsMod.onSnapshot; fbGetDoc = fsMod.getDoc;
-    // quick connectivity probe — also time-boxed
-    await withTimeout(fbGetDoc(fbDoc(db, "users", "dev")), 4000).catch(()=>{});
+    // Real connectivity + permission probe. IMPORTANT: this must actually succeed —
+    // previously its failure was silently swallowed, so firebaseReady got set to true
+    // even when Firestore reads/writes were blocked (e.g. by security rules), which
+    // made the app look "connected" while every subsequent read/write failed quietly
+    // and cross-device sync just never happened. Now a failed probe correctly falls
+    // through to the catch below instead of being hidden.
+    await withTimeout(fbGetDoc(fbDoc(db, "users", "dev")), 4000);
     firebaseReady = true;
-    console.log("[Orbit] Firebase connected.");
+    setSyncStatus(true);
+    console.log("[Orbit] Firebase connected — cross-device sync is live.");
   }catch(err){
-    console.warn("[Orbit] Firebase unavailable (or blocked by an extension/network), falling back to LocalStorage.", err);
     firebaseReady = false;
+    setSyncStatus(false);
+    const reason = err?.code || err?.message || err;
+    console.warn("[Orbit] Firebase unavailable — running local-only on this device. Reason:", reason);
+    if(reason === "permission-denied"){
+      console.warn("[Orbit] That's a Firestore security-rules rejection — this app has no Firebase Auth, so your Firestore rules need to allow reads/writes without auth (e.g. 'allow read, write: if true;') for sync to work.");
+    }
   }
 }
 
@@ -1261,7 +1357,10 @@ async function writeDoc(collection, id, data){
   if(firebaseReady){
     try{
       await fbSetDoc(fbDoc(db, collection, id), data, { merge:true });
-    }catch(err){ console.warn("[Orbit] Firestore write failed, using LS only.", err); }
+    }catch(err){
+      console.warn(`[Orbit] Firestore write to ${path} failed, using LS only. Reason:`, err?.code || err);
+      setSyncStatus(false);
+    }
   }
 }
 
@@ -1288,9 +1387,14 @@ function attachFirestoreListener(collection, id){
         const data = snap.data();
         lsSet(path, data); // keep LS mirror fresh, fans out to all subscribed callbacks
       }
+    }, (err)=>{
+      // This fires for things like Firestore security-rules rejections, which happen
+      // asynchronously and would otherwise fail completely silently.
+      console.warn(`[Orbit] Firestore listener on ${path} failed. Reason:`, err?.code || err);
+      setSyncStatus(false);
     });
     attachedFirestoreDocs.add(path);
-  }catch(err){ console.warn("[Orbit] Firestore subscribe failed.", err); }
+  }catch(err){ console.warn("[Orbit] Firestore subscribe failed.", err); setSyncStatus(false); }
 }
 
 /** Once firebase comes online (possibly after the app already booted off LocalStorage),
@@ -1334,6 +1438,8 @@ function defaultUserDoc(id){
     status: "Idle",
     tasks: [],
     notes: "",
+    notesUpdatedAt: null,           // ms timestamp of last notes edit — drives the "unread" badge
+    notesReadAt: { dev: null, oshu: null }, // ms timestamp each person last read THESE notes
     goals: { daily:120, weekly:840, monthly:3600, yearly:43800 }, // minutes
     achievements: [],
     settings: { accent:"default", avatarChar: id==="dev"?"D":"O", particles:true, sound:false },
@@ -1758,6 +1864,7 @@ function renderAll(){
   renderAchievementsView();
   renderSettingsView();
   initSidebarProfile();
+  updateGlobalNotesBadge();
 }
 
 function renderGreeting(){
@@ -1786,8 +1893,9 @@ function renderDashboardCard(userId){
   card.querySelector('[data-live-text]').textContent = isRunning ? `Studying ${u.currentSubject}` : u.status || "Idle";
   card.querySelector('[data-status-dot]').className = "status-dot " + (isRunning ? "" : "away");
 
-  // glow the timer + avatar while a session is actively running
-  card.querySelector('[data-timer]').classList.toggle("studying", !!isRunning);
+  // glow the timer panel + avatar while a session is actively running
+  const timerPanel = card.querySelector('[data-timer-panel]');
+  if(timerPanel) timerPanel.classList.toggle("studying", !!isRunning);
   const avatarEl = card.querySelector('.avatar');
   if(avatarEl) avatarEl.classList.toggle("studying", !!isRunning);
 
@@ -1808,8 +1916,45 @@ function renderDashboardCard(userId){
   card.querySelector('[data-goal-pct]').textContent = pct + "%";
   card.querySelector('[data-goal-fill]').style.width = pct + "%";
 
+  // Quick note: your own card is a "send a note" composer (writes into your notes,
+  // which is what your partner reads); the partner's card becomes a read-only peek
+  // at their latest note, with a badge if it's unread.
   const noteBox = card.querySelector('[data-quick-note]');
-  if(document.activeElement !== noteBox) noteBox.value = u.notes ? u.notes.split("\n").slice(-3).join("\n") : "";
+  const noteLabel = card.querySelector('[data-quick-note-label]');
+  const noteSendBtn = card.querySelector('[data-quick-note-send]');
+  const noteBadge = card.querySelector('[data-quick-note-badge]');
+  const isOwnCard = userId === state.currentUser;
+  if(noteBox){
+    noteBox.readOnly = !isOwnCard;
+    noteSendBtn?.classList.toggle("hidden", !isOwnCard);
+    if(isOwnCard){
+      if(noteLabel) noteLabel.childNodes[0].textContent = "Send a note";
+      noteBox.placeholder = `Write something for ${CREDENTIALS[otherUser(userId)].name}…`;
+      if(noteBadge) noteBadge.classList.remove("show");
+    }else{
+      if(noteLabel) noteLabel.childNodes[0].textContent = `Latest from ${CREDENTIALS[userId].name}`;
+      const lastLine = (u.notes||"").split("\n").filter(Boolean).slice(-1)[0];
+      if(document.activeElement !== noteBox) noteBox.value = lastLine || "No notes yet.";
+      const readAt = u.notesReadAt?.[state.currentUser] || 0;
+      const isUnread = (u.notesUpdatedAt||0) > readAt;
+      if(noteBadge) noteBadge.classList.toggle("show", isUnread);
+    }
+  }
+}
+
+/** True if the partner has written a note since the current user last read it. */
+function hasUnreadNotes(){
+  if(!state.currentUser) return false;
+  const partnerId = otherUser(state.currentUser);
+  const partner = state.users[partnerId]; if(!partner) return false;
+  const readAt = partner.notesReadAt?.[state.currentUser] || 0;
+  return (partner.notesUpdatedAt||0) > readAt;
+}
+
+/** Reflect unread-note status wherever a badge dot might live outside the Notes view itself. */
+function updateGlobalNotesBadge(){
+  const dot = document.getElementById("nav-notes-badge");
+  if(dot) dot.classList.toggle("show", hasUnreadNotes());
 }
 
 function renderDashboardShared(){
@@ -1842,14 +1987,31 @@ document.querySelectorAll(".user-card").forEach(card=>{
     u.currentSubject = e.target.value;
     saveUser(userId, u);
   });
-  let noteTimer;
-  card.querySelector('[data-quick-note]').addEventListener("input", (e)=>{
-    clearTimeout(noteTimer);
-    noteTimer = setTimeout(()=>{
-      const u = state.users[userId];
-      u.notes = (u.notes ? u.notes + "\n" : "") + e.target.value;
-      saveUser(userId, u, false);
-    }, 800);
+
+  // Quick note → Send: only works from your OWN card (the other card is a read-only
+  // peek at your partner's latest note). Sending appends a timestamped line to your
+  // notebook, which is exactly what the Notes view's unread badge / mark-as-read
+  // system already watches — so your partner sees it flagged as unread right away.
+  const noteBox = card.querySelector('[data-quick-note]');
+  const sendBtn = card.querySelector('[data-quick-note-send]');
+  function sendQuickNote(){
+    if(userId !== state.currentUser) return; // read-only card, nothing to send
+    const text = noteBox.value.trim();
+    if(!text) return;
+    const u = state.users[state.currentUser];
+    const stamp = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    u.notes = (u.notes ? u.notes + "\n" : "") + `[${stamp}] ${text}`;
+    u.notesUpdatedAt = Date.now();
+    saveUser(state.currentUser, u, true);
+    noteBox.value = "";
+    showToast(`Note sent to ${CREDENTIALS[otherUser(state.currentUser)].name}`, "success");
+  }
+  sendBtn.addEventListener("click", sendQuickNote);
+  noteBox.addEventListener("keydown", (e)=>{
+    if((e.ctrlKey || e.metaKey) && e.key === "Enter"){
+      e.preventDefault();
+      sendQuickNote();
+    }
   });
 });
 
@@ -2084,25 +2246,87 @@ function renderGoalsView(){
    NOTES VIEW
    --------------------------------------------------------------- */
 const notesEditor = document.getElementById("notes-editor");
+const notesSaveBtn = document.getElementById("notes-save-btn");
+const notesMarkReadBtn = document.getElementById("notes-mark-read-btn");
 let notesSaveTimer;
+
 function renderNotesView(){
   const userId = state.notesTab;
   const u = state.users[userId]; if(!u) return;
   if(document.activeElement !== notesEditor){
     notesEditor.value = u.notes || "";
   }
+
+  // "Mark as read" only makes sense when looking at the OTHER person's notes
+  const viewingOwnNotes = userId === state.currentUser;
+  const readAt = u.notesReadAt?.[state.currentUser] || 0;
+  const isUnread = !viewingOwnNotes && (u.notesUpdatedAt||0) > readAt;
+  notesMarkReadBtn.classList.toggle("hidden", viewingOwnNotes || !isUnread);
+
+  // Notes are a personal notebook — you can only write in your own. Viewing your
+  // partner's notes is read-only (aside from marking them as read).
+  notesEditor.readOnly = !viewingOwnNotes;
+  notesSaveBtn.classList.toggle("hidden", !viewingOwnNotes);
+  document.getElementById("notes-save-text").textContent = viewingOwnNotes ? "Saved" : `Viewing ${CREDENTIALS[userId].name}'s notes`;
+
+  // unread dots on the tab pills themselves, so you can tell without switching tabs
+  ["dev","oshu"].forEach(id=>{
+    const dot = document.querySelector(`[data-unread-dot="${id}"]`);
+    if(!dot) return;
+    const other = state.users[id]; if(!other){ dot.classList.remove("show"); return; }
+    const otherUnread = id !== state.currentUser && (other.notesUpdatedAt||0) > (other.notesReadAt?.[state.currentUser] || 0);
+    dot.classList.toggle("show", otherUnread);
+  });
+
+  updateGlobalNotesBadge();
 }
+
+/** Save immediately (used by the Save button and the Ctrl/Cmd+Enter shortcut) */
+function saveNotesNow(){
+  clearTimeout(notesSaveTimer);
+  const userId = state.notesTab;
+  if(userId !== state.currentUser) return; // read-only notebook — nothing to save
+  const u = state.users[userId]; if(!u) return;
+  u.notes = notesEditor.value;
+  u.notesUpdatedAt = Date.now();
+  saveUser(userId, u, true);
+  document.getElementById("notes-save-text").textContent = "Saved";
+  notesSaveBtn.classList.add("ripple-flash");
+  setTimeout(()=> notesSaveBtn.classList.remove("ripple-flash"), 300);
+}
+
 notesEditor.addEventListener("input", ()=>{
+  const userId = state.notesTab;
+  if(userId !== state.currentUser) return; // read-only notebook — ignore stray input
   document.getElementById("notes-save-text").textContent = "Saving…";
   clearTimeout(notesSaveTimer);
   notesSaveTimer = setTimeout(()=>{
-    const userId = state.notesTab;
     const u = state.users[userId];
     u.notes = notesEditor.value;
+    u.notesUpdatedAt = Date.now();
     saveUser(userId, u, false);
     document.getElementById("notes-save-text").textContent = "Saved";
   }, 600);
 });
+// Ctrl+Enter / Cmd+Enter saves immediately without waiting for the debounce
+notesEditor.addEventListener("keydown", (e)=>{
+  if((e.ctrlKey || e.metaKey) && e.key === "Enter"){
+    e.preventDefault();
+    saveNotesNow();
+  }
+});
+notesSaveBtn.addEventListener("click", saveNotesNow);
+
+notesMarkReadBtn.addEventListener("click", ()=>{
+  const userId = state.notesTab; // the OTHER person's notes, since the button is hidden on your own
+  const u = state.users[userId]; if(!u) return;
+  u.notesReadAt = u.notesReadAt || { dev:null, oshu:null };
+  u.notesReadAt[state.currentUser] = Date.now();
+  saveUser(userId, u, true);
+  showToast(`Marked ${CREDENTIALS[userId].name}'s notes as read`, "success");
+  renderNotesView();
+});
+
 document.querySelectorAll("[data-notes-tab]").forEach(btn=>{
   btn.addEventListener("click", ()=>{
     document.querySelectorAll("[data-notes-tab]").forEach(b=>b.classList.remove("active"));
