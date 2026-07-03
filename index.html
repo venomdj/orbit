@@ -177,26 +177,6 @@ ul,ol{ list-style:none; }
 .glass-hi{ background:var(--surface-glass-hi); border-color:var(--border-glass-hi); }
 
 /* ================================================================
-   LOADING SCREEN
-   ================================================================ */
-#loading-screen{
-  position:fixed; inset:0; z-index:9999; background:var(--bg-0);
-  display:flex; align-items:center; justify-content:center; flex-direction:column; gap:22px;
-  transition: opacity var(--dur-slow) var(--ease-out), visibility var(--dur-slow);
-}
-#loading-screen.hidden{ opacity:0; visibility:hidden; pointer-events:none; }
-.orbit-loader{ position:relative; width:76px; height:76px; }
-.orbit-loader span{
-  position:absolute; inset:0; border-radius:50%; border:2px solid transparent;
-}
-.orbit-loader span:nth-child(1){ border-top-color:var(--dev-1); animation: spin 1.1s linear infinite; }
-.orbit-loader span:nth-child(2){ inset:12px; border-top-color:var(--oshu-1); animation: spin 1.6s linear infinite reverse; }
-.orbit-loader span:nth-child(3){ inset:24px; border-top-color:var(--shared-1); animation: spin .9s linear infinite; }
-@keyframes spin{ to{ transform:rotate(360deg);} }
-.loading-text{ font-family:var(--f-mono); font-size:12.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--text-2); }
-.loading-text b{ color:var(--text-0); font-weight:600; }
-
-/* ================================================================
    LOGIN SCREEN
    ================================================================ */
 #login-screen{
@@ -379,6 +359,34 @@ ul,ol{ list-style:none; }
   margin:18px 0 6px; font-variant-numeric:tabular-nums;
   background:linear-gradient(135deg, var(--text-0), var(--text-1));
   -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+  transition: filter var(--dur-med) var(--ease-out);
+  border-radius:16px;
+}
+/* glow while a session is actively running — color matches whose card it is */
+.timer-display.studying.dev{
+  animation: timerGlowDev 1.8s ease-in-out infinite;
+}
+.timer-display.studying.oshu{
+  animation: timerGlowOshu 1.8s ease-in-out infinite;
+}
+@keyframes timerGlowDev{
+  0%,100%{ filter:drop-shadow(0 0 10px var(--dev-glow)) drop-shadow(0 0 2px var(--dev-glow)); }
+  50%{ filter:drop-shadow(0 0 26px var(--dev-glow)) drop-shadow(0 0 8px var(--dev-glow)); }
+}
+@keyframes timerGlowOshu{
+  0%,100%{ filter:drop-shadow(0 0 10px var(--oshu-glow)) drop-shadow(0 0 2px var(--oshu-glow)); }
+  50%{ filter:drop-shadow(0 0 26px var(--oshu-glow)) drop-shadow(0 0 8px var(--oshu-glow)); }
+}
+/* matching glow ring around the avatar while studying */
+.avatar.studying.dev{ animation: avatarGlowDev 1.8s ease-in-out infinite; }
+.avatar.studying.oshu{ animation: avatarGlowOshu 1.8s ease-in-out infinite; }
+@keyframes avatarGlowDev{
+  0%,100%{ box-shadow:0 0 0 3px rgba(91,141,255,.28), 0 0 14px 2px var(--dev-glow); }
+  50%{ box-shadow:0 0 0 5px rgba(91,141,255,.4), 0 0 28px 8px var(--dev-glow); }
+}
+@keyframes avatarGlowOshu{
+  0%,100%{ box-shadow:0 0 0 3px rgba(255,111,165,.28), 0 0 14px 2px var(--oshu-glow); }
+  50%{ box-shadow:0 0 0 5px rgba(255,111,165,.4), 0 0 28px 8px var(--oshu-glow); }
 }
 .timer-sub{ text-align:center; font-size:12px; color:var(--text-3); margin-bottom:18px; }
 .timer-sub span{ color:var(--text-1); font-weight:600; }
@@ -618,18 +626,24 @@ ul,ol{ list-style:none; }
   .grid-3{ grid-template-columns:repeat(2,1fr); }
   .grid-4{ grid-template-columns:repeat(2,1fr); }
 }
+.sidebar-backdrop{
+  display:none; position:fixed; inset:0; z-index:49; background:rgba(0,0,0,.55);
+  opacity:0; pointer-events:none; transition:opacity var(--dur-med) var(--ease-out);
+}
 @media (max-width: 860px){
   :root{ --sidebar-w:0px; }
-  .sidebar{ position:fixed; left:0; top:0; transform:translateX(-100%); transition:transform var(--dur-med) var(--ease-out); width:250px; }
+  .sidebar{ position:fixed; left:0; top:0; transform:translateX(-100%); transition:transform var(--dur-med) var(--ease-out); width:250px; height:100dvh; z-index:60; }
   .sidebar.open{ transform:translateX(0); box-shadow:0 0 60px rgba(0,0,0,.6); }
   .topbar{ padding:0 16px; }
   .view-wrap{ padding:18px 16px 60px; }
   .greeting-text{ font-size:16px; }
   .topbar-stats{ display:none; }
   .grid-3, .grid-4{ grid-template-columns:1fr 1fr; }
-  #menu-toggle{ display:flex; }
+  #menu-toggle{ display:flex !important; }
+  .sidebar-backdrop{ display:block; }
+  .sidebar-backdrop.open{ opacity:1; pointer-events:auto; }
 }
-@media (min-width: 861px){ #menu-toggle{ display:none; } }
+@media (min-width: 861px){ #menu-toggle{ display:none !important; } }
 </style>
 </head>
 <body>
@@ -643,14 +657,8 @@ ul,ol{ list-style:none; }
 <div class="noise-overlay"></div>
 <div id="particles"></div>
 
-<!-- ================= LOADING SCREEN ================= -->
-<div id="loading-screen">
-  <div class="orbit-loader"><span></span><span></span><span></span></div>
-  <div class="loading-text">connecting to <b>orbit</b></div>
-</div>
-
 <!-- ================= LOGIN SCREEN ================= -->
-<div id="login-screen" class="hidden">
+<div id="login-screen">
   <div class="login-card glass">
     <div class="login-mark"></div>
     <h1 class="login-title">Orbit</h1>
@@ -754,13 +762,16 @@ ul,ol{ list-style:none; }
     </div>
   </aside>
 
+  <!-- backdrop shown behind the sidebar on mobile when it's open -->
+  <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
   <!-- ---------------- MAIN COLUMN ---------------- -->
   <div class="main-col">
 
     <!-- TOPBAR -->
     <header class="topbar">
       <div style="display:flex; align-items:center; gap:14px;">
-        <button class="btn-icon" id="menu-toggle" style="display:none;">
+        <button class="btn-icon" id="menu-toggle">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>
         <div class="greeting">
@@ -1255,22 +1266,43 @@ async function writeDoc(collection, id, data){
 }
 
 /** Subscribe to a document; callback fires with latest data (LS immediately, then FB realtime if available) */
+const attachedFirestoreDocs = new Set(); // paths already wired to a live onSnapshot listener
 function subscribeDoc(collection, id, cb){
   const path = `${collection}/${id}`;
   listeners[path] = listeners[path] || [];
   listeners[path].push(cb);
   const cached = lsGet(path);
   if(cached) cb(cached);
-  if(firebaseReady){
-    try{
-      fbOnSnapshot(fbDoc(db, collection, id), (snap)=>{
-        if(snap.exists()){
-          const data = snap.data();
-          lsSet(path, data); // keep LS mirror fresh
-        }
-      });
-    }catch(err){ console.warn("[Orbit] Firestore subscribe failed.", err); }
-  }
+  attachFirestoreListener(collection, id);
+}
+
+/** Attach the live Firestore listener for a doc, if firebase is ready and it isn't already attached.
+ *  Safe to call multiple times / before firebase is ready — it becomes a no-op until firebaseReady flips true,
+ *  at which point attachAllPendingFirestoreListeners() re-runs this for every subscribed doc. */
+function attachFirestoreListener(collection, id){
+  const path = `${collection}/${id}`;
+  if(!firebaseReady || attachedFirestoreDocs.has(path)) return;
+  try{
+    fbOnSnapshot(fbDoc(db, collection, id), (snap)=>{
+      if(snap.exists()){
+        const data = snap.data();
+        lsSet(path, data); // keep LS mirror fresh, fans out to all subscribed callbacks
+      }
+    });
+    attachedFirestoreDocs.add(path);
+  }catch(err){ console.warn("[Orbit] Firestore subscribe failed.", err); }
+}
+
+/** Once firebase comes online (possibly after the app already booted off LocalStorage),
+ *  wire up realtime listeners for every doc already subscribed to, and push any local
+ *  writes made in the meantime up to Firestore so both sources reconcile. */
+function attachAllPendingFirestoreListeners(){
+  Object.keys(listeners).forEach(path=>{
+    const [collection, id] = path.split("/");
+    attachFirestoreListener(collection, id);
+    const local = lsGet(path);
+    if(local) writeDoc(collection, id, local);
+  });
 }
 
 /* ---------------------------------------------------------------
@@ -1446,18 +1478,18 @@ document.addEventListener("click", (e)=>{
    4. AUTH
    --------------------------------------------------------------- */
 const loginScreen = document.getElementById("login-screen");
-const loadingScreen = document.getElementById("loading-screen");
 const appRoot = document.getElementById("app");
 const loginForm = document.getElementById("login-form");
 const loginError = document.getElementById("login-error");
 const loginErrorText = document.getElementById("login-error-text");
 
 function checkSession(){
+  // Runs immediately on load, straight off LocalStorage — never waits on the network,
+  // so the login screen (or a returning session) appears instantly.
   const saved = localStorage.getItem("orbit:session");
   if(saved && CREDENTIALS[saved]){
     startSession(saved, false);
   }else{
-    loadingScreen.classList.add("hidden");
     loginScreen.classList.remove("hidden");
   }
 }
@@ -1495,7 +1527,6 @@ async function startSession(userId, animateIn){
   subscribeDoc("users", "oshu", (data)=>{ state.users.oshu = data; onUserDataChanged("oshu"); });
   subscribeDoc("shared", "shared", (data)=>{ state.shared = data; onSharedDataChanged(); });
 
-  loadingScreen.classList.add("hidden");
   loginScreen.classList.add("hidden");
   appRoot.classList.add("visible");
 
@@ -1754,6 +1785,11 @@ function renderDashboardCard(userId){
   card.querySelector('[data-live-badge]').className = "live-badge " + (isRunning ? "on" : "off");
   card.querySelector('[data-live-text]').textContent = isRunning ? `Studying ${u.currentSubject}` : u.status || "Idle";
   card.querySelector('[data-status-dot]').className = "status-dot " + (isRunning ? "" : "away");
+
+  // glow the timer + avatar while a session is actively running
+  card.querySelector('[data-timer]').classList.toggle("studying", !!isRunning);
+  const avatarEl = card.querySelector('.avatar');
+  if(avatarEl) avatarEl.classList.toggle("studying", !!isRunning);
 
   const subjSelect = card.querySelector('[data-subject-select]');
   if(document.activeElement !== subjSelect) subjSelect.value = u.currentSubject;
@@ -2391,15 +2427,25 @@ function switchView(viewName){
   state.view = viewName;
   document.querySelectorAll(".nav-item[data-view]").forEach(n=> n.classList.toggle("active", n.dataset.view===viewName));
   document.querySelectorAll(".view").forEach(v=> v.classList.toggle("active", v.id === `view-${viewName}`));
-  document.getElementById("sidebar").classList.remove("open");
+  closeSidebar();
   window.scrollTo({top:0, behavior:"smooth"});
 }
 document.querySelectorAll(".nav-item[data-view]").forEach(btn=>{
   btn.addEventListener("click", ()=> switchView(btn.dataset.view));
 });
+const sidebarBackdrop = document.getElementById("sidebar-backdrop");
+function openSidebar(){
+  document.getElementById("sidebar").classList.add("open");
+  sidebarBackdrop.classList.add("open");
+}
+function closeSidebar(){
+  document.getElementById("sidebar").classList.remove("open");
+  sidebarBackdrop.classList.remove("open");
+}
 document.getElementById("menu-toggle").addEventListener("click", ()=>{
-  document.getElementById("sidebar").classList.toggle("open");
+  document.getElementById("sidebar").classList.contains("open") ? closeSidebar() : openSidebar();
 });
+sidebarBackdrop.addEventListener("click", closeSidebar);
 
 /* ---------------------------------------------------------------
    COMMAND PALETTE
@@ -2468,27 +2514,19 @@ document.addEventListener("keydown", (e)=>{
 /* ---------------------------------------------------------------
    BOOT SEQUENCE
    --------------------------------------------------------------- */
-(async function boot(){
-  // Absolute fallback: no matter what happens above, never leave the user
-  // staring at the loading screen for more than 5s.
-  const forceReveal = setTimeout(()=>{
-    if(!loadingScreen.classList.contains("hidden")){
-      loadingScreen.classList.add("hidden");
-      loginScreen.classList.remove("hidden");
-    }
-  }, 5000);
+// Show the login screen (or resume a saved session) the instant the page loads —
+// this never waits on the network, so there's no more "connecting..." delay.
+checkSession();
 
-  try{
-    await initFirebase();
-    checkSession();
-  }catch(err){
-    console.error("[Orbit] Boot error, showing login anyway.", err);
-    loadingScreen.classList.add("hidden");
-    loginScreen.classList.remove("hidden");
-  }finally{
-    clearTimeout(forceReveal);
-  }
-})();
+// Connect to Firebase in the background. Whenever it finishes (fast on a normal
+// connection, or falls back to LocalStorage if blocked/offline), wire up realtime
+// listeners for anything already subscribed to and reconcile any local writes made
+// in the meantime — so full Firebase sync is retained without blocking the login.
+initFirebase().then(()=>{
+  if(firebaseReady) attachAllPendingFirestoreListeners();
+}).catch(err=>{
+  console.warn("[Orbit] Firebase init failed, continuing on LocalStorage.", err);
+});
 
 </script>
 </body>
